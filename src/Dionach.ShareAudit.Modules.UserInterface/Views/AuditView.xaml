@@ -7,15 +7,15 @@
     xmlns:helpers="clr-namespace:Dionach.ShareAudit.Modules.UserInterface.Helpers"
     xmlns:model="clr-namespace:Dionach.ShareAudit.Model;assembly=Dionach.ShareAudit.Model"
     xmlns:prism="http://prismlibrary.com/"
+    xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
     prism:ViewModelLocator.AutoWireViewModel="True">
     <DockPanel LastChildFill="True">
         <DockPanel.Resources>
             <helpers:BindingProxy x:Key="Proxy" Data="{Binding}" />
         </DockPanel.Resources>
         <StackPanel
-            HorizontalAlignment="Right"
             DockPanel.Dock="Bottom"
-            Orientation="Horizontal">
+            Orientation="Horizontal" HorizontalAlignment="Right">
             <Button
                 MinWidth="75"
                 Margin="5"
@@ -37,7 +37,49 @@
                 Command="{Binding StopAudit}"
                 Content="Stop"
                 Visibility="{Binding IsRunning, Converter={x:Static converters:IsFalseToCollapsedConverter.Default}}" />
+        </StackPanel>        
+        <StackPanel
+            DockPanel.Dock="Bottom"
+            Orientation="Vertical" 
+            HorizontalAlignment="Right"
+            Name="filterOptions">
+            <GroupBox Margin="5" Header="Advanced Filtering">
+                <StackPanel>
+                    <CheckBox
+                            Margin="5"
+                            Content="Read Only" 
+                            IsChecked="{Binding Project.Configuration.EnableReadOnly}"/>
+                    <TextBlock
+                            Margin="25,0,5,5"
+                            Text="(This will result in only exporting read only drives.)"
+                            TextWrapping="Wrap" />
+                    <CheckBox
+                            Margin="5"
+                            Content="Write Only"
+                            IsChecked="{Binding Project.Configuration.EnableWriteOnly}"/>
+                    <TextBlock
+                            Margin="25,0,5,5"
+                            Text="(This will result in only exporting write only drives.)"
+                            TextWrapping="Wrap" />
+                    <CheckBox
+                            Margin="5"
+                            Content="Shares Only"
+                            IsChecked="{Binding Project.Configuration.EnableSharesOnly}"/>
+                    <TextBlock
+                            Margin="25,0,5,5"
+                            Text="(This will result in files and folders not being exported.)"
+                            TextWrapping="Wrap" />
+                    <Button
+                            MinWidth="75"
+                            Margin="5"
+                            Padding="5"
+                            Command="{Binding ApplyFilter}"
+                            Content="Apply Filters"
+                            Visibility="{Binding IsRunning, Converter={x:Static converters:IsTrueToCollapsedConverter.Default}}" /> 
+                </StackPanel>
+            </GroupBox>
         </StackPanel>
+        
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="2*" />

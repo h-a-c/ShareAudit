@@ -12,7 +12,9 @@ namespace Dionach.ShareAudit.Model
         private string _scope;
         private bool _useAlternateAuthenticationMethod = true;
         private bool _useVerbatimScope = false;
-
+        private bool _enableReadOnly = false;
+        private bool _enableWriteOnly = false;
+        private bool _enableSharesOnly = false;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public Credentials Credentials
@@ -26,6 +28,51 @@ namespace Dionach.ShareAudit.Model
                 }
 
                 _credentials = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool EnableSharesOnly
+        {
+            get => _enableSharesOnly;
+            set
+            {
+                if (value == _enableSharesOnly)
+                {
+                    return;
+                }
+
+                _enableSharesOnly = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool EnableReadOnly
+        {
+            get => _enableReadOnly;
+            set
+            {
+                if (value == _enableReadOnly)
+                {
+                    return;
+                }
+
+                _enableReadOnly = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool EnableWriteOnly
+        {
+            get => _enableWriteOnly;
+            set
+            {
+                if (value == _enableWriteOnly)
+                {
+                    return;
+                }
+
+                _enableWriteOnly = value;
                 OnPropertyChanged();
             }
         }

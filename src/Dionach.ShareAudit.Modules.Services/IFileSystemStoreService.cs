@@ -15,7 +15,7 @@ namespace Dionach.ShareAudit.Modules.Services
 
         Task CreateProjectAsync(string path);
 
-        Task ExportProjectAsync(Project project, string path);
+        Task ExportProjectAsync(Project project, string path, System.Collections.Generic.LinkedList<string> filters);
 
         Task<Project> LoadProjectAsync(string path);
 

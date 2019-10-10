@@ -24,24 +24,31 @@ namespace Dionach.ShareAudit.Modules.Services
             await SaveProjectAsync(new Project(), path);
         }
 
-        public async Task ExportProjectAsync(Project project, string path)
+        public async Task ExportProjectAsync(Project project, string path, System.Collections.Generic.LinkedList<string> filters)
         {
             await Task.Run(() =>
             {
                 var username = $"{project.Configuration.Credentials.Username}@{project.Configuration.Credentials.Domain}";
                 var sb = new StringBuilder();
+                if (filters.Count == 0 )
+                {
+                    Console.WriteLine("poo");
+                }
                 sb.AppendLine("\"UNC Path\",\"Type\",\"Accessible\",\"Effective Read\",\"Effective Write\",\"Username\"");
 
                 foreach (var host in project.Hosts)
                 {
-                    sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"N/A\",\"{username}\"");
-
+                    if (filters.Count <= 0) {
+                        sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"N/A\",\"{username}\"");
+                    }
                     foreach (var share in host.Shares)
                     {
-                        WriteFolderEntry(sb, share, username);
+                        if (share.EffectiveAccess.Read && filters.Contains("r"))
+                        {
+                            WriteFolderEntry(sb, share, username);
+                        }
                     }
                 }
-
                 File.WriteAllText(path, sb.ToString());
             });
         }
@@ -77,6 +84,8 @@ namespace Dionach.ShareAudit.Modules.Services
 
         private void WriteFolderEntry(StringBuilder sb, IFolderEntry entry, string username)
         {
+            if (!entry.EffectiveAccess.Read) { return; }
+
             sb.AppendLine($"\"{entry.FullName}\",\"{((entry is Share) ? "Share" : "Directory")}\",\"{((entry is Share) ? (entry as Share).Accessible : entry.EffectiveAccess.Read)}\",\"{entry.EffectiveAccess.Read}\",\"{entry.EffectiveAccess.Write}\",\"{username}\"");
 
             foreach (var childEntry in entry.FileSystemEntries)

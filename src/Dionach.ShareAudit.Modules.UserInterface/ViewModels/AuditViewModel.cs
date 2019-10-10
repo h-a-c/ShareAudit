@@ -5,6 +5,7 @@ using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Regions;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
 
@@ -17,10 +18,15 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
         private readonly ISmbUtilitiesService _smbUtilitiesService;
         private bool _isBusy;
         private bool _isRunning;
+        private bool _isReadOnly = false;
+        private bool _isWriteOnly = false;
+        private bool _isSharesOnly = false;
+        private bool _filterButtonClicked = false;
         private Project _project;
         private string _projectPath;
         private bool _runningInitialAutomaticAudit = false;
         private object _selectedItem = new object();
+        private LinkedList<String> _filters = new LinkedList<String>();
 
         public AuditViewModel(
             IFileSystemStoreService fileSystemStoreService,
@@ -50,6 +56,7 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
                 IsBusy = false;
             };
 
+            ApplyFilter = new DelegateCommand(OnApplyFilter, CanExport).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
             Export = new DelegateCommand(OnExport, CanExport).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
             StartAudit = new DelegateCommand(OnStartAudit, CanStartAudit).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
             StopAudit = new DelegateCommand(OnStopAudit, CanStopAudit).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
@@ -60,6 +67,8 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
         public DelegateCommand AuditFolder { get; }
 
         public DelegateCommand Export { get; }
+
+        public DelegateCommand ApplyFilter { get; }
 
         public bool IsBusy
         {
@@ -97,11 +106,31 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
 
         public DelegateCommand StopAudit { get; }
 
+        public DelegateCommand Filter { get; }
+
         public bool IsNavigationTarget(NavigationContext navigationContext) => false;
 
         public void OnNavigatedFrom(NavigationContext navigationContext)
         {
         }
+
+        /**
+         * read = r
+         * write = w
+         * shares = s
+         */
+        private void OnApplyFilter()
+        {
+            MessageBox.Show("Filter Button Pressed\n" + Project.Configuration.EnableReadOnly + "\n" + Project.Configuration.EnableSharesOnly + "\n" + Project.Configuration.EnableWriteOnly);
+            _filters.Clear();
+            _isReadOnly = Project.Configuration.EnableReadOnly;
+            _isSharesOnly= Project.Configuration.EnableSharesOnly;
+            _isWriteOnly = Project.Configuration.EnableWriteOnly;
+            if (_isReadOnly) { _filters.AddLast("r"); }
+            if (_isSharesOnly) { _filters.AddLast("s"); }
+            if (_isWriteOnly) { _filters.AddLast("w"); }
+            _filterButtonClicked = true;
+    }
 
         public void OnNavigatedTo(NavigationContext navigationContext)
         {
@@ -153,7 +182,13 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
         private async void OnExport()
         {
             IsBusy = true;
-
+            if (_filterButtonClicked)
+            {
+                foreach (var item in _filters)
+                {
+                    MessageBox.Show(item);
+                }
+            }
             var dialog = new SaveFileDialog
             {
                 Filter = _fileSystemStoreService.ExportFilter,
@@ -162,7 +197,7 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                await _fileSystemStoreService.ExportProjectAsync(_project, dialog.FileName);
+                await _fileSystemStoreService.ExportProjectAsync(_project, dialog.FileName, _filters);
             }
 
             IsBusy = false;
