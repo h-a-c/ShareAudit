@@ -11,6 +11,8 @@ namespace Dionach.ShareAudit.Modules.Services
 {
     public class FileSystemStoreService : IFileSystemStoreService
     {
+        private bool _readOnly = false;
+        private bool _writeOnly = false;
         public string ExportDefaultFilename => DateTime.Now.ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture);
 
         public string ExportFilter => "Share Audit Export (*.csv)|*.csv";
@@ -30,27 +32,133 @@ namespace Dionach.ShareAudit.Modules.Services
             {
                 var username = $"{project.Configuration.Credentials.Username}@{project.Configuration.Credentials.Domain}";
                 var sb = new StringBuilder();
-                if (filters.Count == 0 )
-                {
-                    Console.WriteLine("poo");
-                }
-                sb.AppendLine("\"UNC Path\",\"Type\",\"Accessible\",\"Effective Read\",\"Effective Write\",\"Username\"");
 
-                foreach (var host in project.Hosts)
+                if (!project.Configuration.EnableReadOnly && !project.Configuration.EnableWriteOnly && !project.Configuration.EnableSharesOnly && !project.Configuration.EnableHostOnly)
                 {
-                    if (filters.Count <= 0) {
-                        sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"N/A\",\"{username}\"");
-                    }
-                    foreach (var share in host.Shares)
+                    sb.AppendLine("\"UNC Path\",\"Type\",\"Accessible\",\"Effective Read\",\"Effective Write\",\"Username\"");
+
+                    foreach (var host in project.Hosts)
                     {
-                        if (share.EffectiveAccess.Read && filters.Contains("r"))
+                        sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"N/A\",\"{username}\"");
+                        foreach (var share in host.Shares)
                         {
                             WriteFolderEntry(sb, share, username);
                         }
                     }
                 }
+                else
+                {
+                    var header_count = 0;
+                    var appendLine = "\"UNC Path\",\"Type\",\"Accessible\"";
+                    if (project.Configuration.EnableReadOnly)
+                    {
+                        appendLine = appendLine + ",\"Effective Read\"";
+                        header_count = header_count + 1;
+                    }
+                    if (project.Configuration.EnableWriteOnly)
+                    {
+                        appendLine = appendLine + ",\"Effective Write\"";
+                        header_count = header_count + 1;
+                    }
+                    appendLine = appendLine + ",\"Username\"";
+                    sb.AppendLine(appendLine);
+
+                    // Write the shares read/write etc.
+                    foreach (var host in project.Hosts)
+                    {
+                        if (project.Configuration.EnableHostOnly)
+                        {
+                            if (!host.Accessible)
+                            {
+                                continue;
+                            }
+                        }
+                        if (header_count == 1)
+                        {
+                            sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"{username}\"");
+                        }
+                        else
+                        {
+                            sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"N/A\",\"{username}\"");
+                        }
+                        foreach (var share in host.Shares)
+                        {
+                            CustomWriteFolderEntry(sb, share, username, project.Configuration);
+                        }
+                    }
+                }
+
                 File.WriteAllText(path, sb.ToString());
             });
+        }
+
+        private void CustomWriteFolderEntry(StringBuilder sb, IFolderEntry entry, string username, Dionach.ShareAudit.Model.Configuration config)
+        {
+            string lineAddition = "\"" + entry.FullName + "\"";
+
+            // Shares or Directory
+            if (entry is Share)
+            {
+                lineAddition = lineAddition + ",\"Share\"";
+            }
+            else
+            {
+                lineAddition = lineAddition + ",\"Directory\"";
+            }
+
+            // If it is accessible
+            if ((entry as Share) != null)
+            {
+                lineAddition = lineAddition + "," + (entry as Share).Accessible;
+            }
+            else
+            {
+                lineAddition = lineAddition + "," + entry.EffectiveAccess.Read;
+            }
+
+            if (config.EnableReadOnly)
+            {
+                lineAddition = lineAddition + ",\" " + entry.EffectiveAccess.Read + "\"";
+                if (!entry.EffectiveAccess.Read) { return; }
+            }
+
+            if (config.EnableWriteOnly)
+            {
+                lineAddition = lineAddition + ",\" " + entry.EffectiveAccess.Write + "\"";
+                if (!entry.EffectiveAccess.Write) { return; }
+            }
+
+            lineAddition = lineAddition + ",\" " + username + "\"";
+            sb.AppendLine(lineAddition);
+
+            if (config.EnableSharesOnly)
+            {
+                return;
+            }
+
+            foreach (var childEntry in entry.FileSystemEntries)
+            {
+                if (childEntry is IFolderEntry)
+                {
+                    CustomWriteFolderEntry(sb, childEntry as IFolderEntry, username, config);
+                }
+                else
+                {
+                    string childAddition = "\"" + childEntry.FullName + "\",File,\"" + childEntry.EffectiveAccess.Read + "\"";
+                    if (config.EnableReadOnly)
+                    {
+                        childAddition = childAddition + ",\" " + entry.EffectiveAccess.Read + "\"";
+                    }
+
+                    if (config.EnableWriteOnly)
+                    {
+                        childAddition = childAddition + ",\" " + entry.EffectiveAccess.Write + "\"";
+                    }
+
+                    childAddition = childAddition + ",\" " + username + "\"";
+                    sb.AppendLine(childAddition);
+                }
+            }
         }
 
         public async Task<Project> LoadProjectAsync(string path)
@@ -84,8 +192,6 @@ namespace Dionach.ShareAudit.Modules.Services
 
         private void WriteFolderEntry(StringBuilder sb, IFolderEntry entry, string username)
         {
-            if (!entry.EffectiveAccess.Read) { return; }
-
             sb.AppendLine($"\"{entry.FullName}\",\"{((entry is Share) ? "Share" : "Directory")}\",\"{((entry is Share) ? (entry as Share).Accessible : entry.EffectiveAccess.Read)}\",\"{entry.EffectiveAccess.Read}\",\"{entry.EffectiveAccess.Write}\",\"{username}\"");
 
             foreach (var childEntry in entry.FileSystemEntries)

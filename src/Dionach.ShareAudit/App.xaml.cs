@@ -5,7 +5,6 @@ using Prism.Ioc;
 using Prism.Modularity;
 using System;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 
 namespace Dionach.ShareAudit

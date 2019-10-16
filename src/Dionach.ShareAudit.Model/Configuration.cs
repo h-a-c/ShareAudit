@@ -15,6 +15,7 @@ namespace Dionach.ShareAudit.Model
         private bool _enableReadOnly = false;
         private bool _enableWriteOnly = false;
         private bool _enableSharesOnly = false;
+        private bool _enableHostOnly = false;
         public event PropertyChangedEventHandler PropertyChanged;
 
         public Credentials Credentials
@@ -28,6 +29,21 @@ namespace Dionach.ShareAudit.Model
                 }
 
                 _credentials = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public bool EnableHostOnly
+        {
+            get => _enableHostOnly;
+            set
+            {
+                if (value == _enableHostOnly)
+                {
+                    return;
+                }
+
+                _enableHostOnly = value;
                 OnPropertyChanged();
             }
         }

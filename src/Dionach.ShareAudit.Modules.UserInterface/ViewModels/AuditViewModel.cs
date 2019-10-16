@@ -124,13 +124,13 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
             MessageBox.Show("Filter Button Pressed\n" + Project.Configuration.EnableReadOnly + "\n" + Project.Configuration.EnableSharesOnly + "\n" + Project.Configuration.EnableWriteOnly);
             _filters.Clear();
             _isReadOnly = Project.Configuration.EnableReadOnly;
-            _isSharesOnly= Project.Configuration.EnableSharesOnly;
+            _isSharesOnly = Project.Configuration.EnableSharesOnly;
             _isWriteOnly = Project.Configuration.EnableWriteOnly;
             if (_isReadOnly) { _filters.AddLast("r"); }
             if (_isSharesOnly) { _filters.AddLast("s"); }
             if (_isWriteOnly) { _filters.AddLast("w"); }
             _filterButtonClicked = true;
-    }
+        }
 
         public void OnNavigatedTo(NavigationContext navigationContext)
         {
