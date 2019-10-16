@@ -77,13 +77,6 @@
                             Margin="25,0,5,5"
                             Text="(This will result in files and folders not being exported.)"
                             TextWrapping="Wrap" />
-                    <Button
-                            MinWidth="75"
-                            Margin="5"
-                            Padding="5"
-                            Command="{Binding ApplyFilter}"
-                            Content="Apply Filters"
-                            Visibility="{Binding IsRunning, Converter={x:Static converters:IsTrueToCollapsedConverter.Default}}" /> 
                 </StackPanel>
             </GroupBox>
         </StackPanel>
