@@ -81,7 +81,7 @@ namespace Dionach.ShareAudit.Modules.Services
             List<string> file_list = config.Files.Files.Split(',').ToList<string>();
             foreach (var bad_file in file_list)
             {
-                if (entry.FullName.Contains(bad_file.Trim()))
+                if (entry.FullName.Contains(bad_file.Trim()) && bad_file.Length > 0)
                 {
                     return;
                 }
