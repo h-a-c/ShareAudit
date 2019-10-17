@@ -26,7 +26,6 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
         private string _projectPath;
         private bool _runningInitialAutomaticAudit = false;
         private object _selectedItem = new object();
-        private LinkedList<String> _filters = new LinkedList<String>();
 
         public AuditViewModel(
             IFileSystemStoreService fileSystemStoreService,
@@ -56,7 +55,6 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
                 IsBusy = false;
             };
 
-            ApplyFilter = new DelegateCommand(OnApplyFilter, CanExport).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
             Export = new DelegateCommand(OnExport, CanExport).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
             StartAudit = new DelegateCommand(OnStartAudit, CanStartAudit).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
             StopAudit = new DelegateCommand(OnStopAudit, CanStopAudit).ObservesProperty(() => IsBusy).ObservesProperty(() => IsRunning);
@@ -114,24 +112,6 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
         {
         }
 
-        /**
-         * read = r
-         * write = w
-         * shares = s
-         */
-        private void OnApplyFilter()
-        {
-            MessageBox.Show("Filter Button Pressed\n" + Project.Configuration.EnableReadOnly + "\n" + Project.Configuration.EnableSharesOnly + "\n" + Project.Configuration.EnableWriteOnly);
-            _filters.Clear();
-            _isReadOnly = Project.Configuration.EnableReadOnly;
-            _isSharesOnly = Project.Configuration.EnableSharesOnly;
-            _isWriteOnly = Project.Configuration.EnableWriteOnly;
-            if (_isReadOnly) { _filters.AddLast("r"); }
-            if (_isSharesOnly) { _filters.AddLast("s"); }
-            if (_isWriteOnly) { _filters.AddLast("w"); }
-            _filterButtonClicked = true;
-        }
-
         public void OnNavigatedTo(NavigationContext navigationContext)
         {
             IsBusy = true;
@@ -182,13 +162,6 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
         private async void OnExport()
         {
             IsBusy = true;
-            if (_filterButtonClicked)
-            {
-                foreach (var item in _filters)
-                {
-                    MessageBox.Show(item);
-                }
-            }
             var dialog = new SaveFileDialog
             {
                 Filter = _fileSystemStoreService.ExportFilter,
@@ -197,7 +170,7 @@ namespace Dionach.ShareAudit.Modules.UserInterface.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                await _fileSystemStoreService.ExportProjectAsync(_project, dialog.FileName, _filters);
+                await _fileSystemStoreService.ExportProjectAsync(_project, dialog.FileName);
             }
 
             IsBusy = false;

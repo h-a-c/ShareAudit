@@ -6,6 +6,7 @@ namespace Dionach.ShareAudit.Model
     public class Configuration : INotifyPropertyChanged
     {
         private Credentials _credentials = new Credentials();
+        private FilteredFiles _files = new FilteredFiles();
         private bool _disablePortScan = false;
         private bool _disableReverseDnsLookup = false;
         private bool _isReadOnly = false;
@@ -29,6 +30,21 @@ namespace Dionach.ShareAudit.Model
                 }
 
                 _credentials = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public FilteredFiles Files
+        {
+            get => _files;
+            set
+            {
+                if (ReferenceEquals(value, _files))
+                {
+                    return;
+                }
+
+                _files = value;
                 OnPropertyChanged();
             }
         }

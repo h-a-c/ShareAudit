@@ -77,6 +77,11 @@
                             Margin="25,0,5,5"
                             Text="(This will result in files and folders not being exported.)"
                             TextWrapping="Wrap" />
+                    <TextBlock
+                            Margin="10,0,1,5"
+                            Text="List of shares to ignore.Separate values with a comma such as: $print, $C"
+                            TextWrapping="Wrap" />
+                    <TextBox Margin="5" Text="{Binding Project.Configuration.Files.Files}"/>
                 </StackPanel>
             </GroupBox>
         </StackPanel>

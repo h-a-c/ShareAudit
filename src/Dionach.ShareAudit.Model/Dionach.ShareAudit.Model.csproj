@@ -44,6 +44,7 @@
     <Compile Include="AccessRuleEntry.cs" />
     <Compile Include="DirectoryEntry.cs" />
     <Compile Include="EffectiveAccess.cs" />
+    <Compile Include="FilteredFiles.cs" />
     <Compile Include="FolderEntryState.cs" />
     <Compile Include="FileEntry.cs" />
     <Compile Include="FileEntryState.cs" />

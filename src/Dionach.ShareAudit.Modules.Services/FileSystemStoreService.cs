@@ -1,7 +1,9 @@
 ﻿using Dionach.ShareAudit.Model;
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -26,14 +28,14 @@ namespace Dionach.ShareAudit.Modules.Services
             await SaveProjectAsync(new Project(), path);
         }
 
-        public async Task ExportProjectAsync(Project project, string path, System.Collections.Generic.LinkedList<string> filters)
+        public async Task ExportProjectAsync(Project project, string path)
         {
             await Task.Run(() =>
             {
                 var username = $"{project.Configuration.Credentials.Username}@{project.Configuration.Credentials.Domain}";
                 var sb = new StringBuilder();
 
-                if (!project.Configuration.EnableReadOnly && !project.Configuration.EnableWriteOnly && !project.Configuration.EnableSharesOnly && !project.Configuration.EnableHostOnly)
+                if (!project.Configuration.EnableReadOnly && !project.Configuration.EnableWriteOnly && !project.Configuration.EnableSharesOnly && !project.Configuration.EnableHostOnly && project.Configuration.Files.Files.Length == 0 )
                 {
                     sb.AppendLine("\"UNC Path\",\"Type\",\"Accessible\",\"Effective Read\",\"Effective Write\",\"Username\"");
 
@@ -48,36 +50,15 @@ namespace Dionach.ShareAudit.Modules.Services
                 }
                 else
                 {
-                    var header_count = 0;
-                    var appendLine = "\"UNC Path\",\"Type\",\"Accessible\"";
-                    if (project.Configuration.EnableReadOnly)
-                    {
-                        appendLine = appendLine + ",\"Effective Read\"";
-                        header_count = header_count + 1;
-                    }
-                    if (project.Configuration.EnableWriteOnly)
-                    {
-                        appendLine = appendLine + ",\"Effective Write\"";
-                        header_count = header_count + 1;
-                    }
-                    appendLine = appendLine + ",\"Username\"";
-                    sb.AppendLine(appendLine);
+                    sb.AppendLine("\"UNC Path\",\"Type\",\"Accessible\",\"Effective Read\",\"Effective Write\",\"Username\"");
 
                     // Write the shares read/write etc.
                     foreach (var host in project.Hosts)
                     {
-                        if (project.Configuration.EnableHostOnly)
+                        if (project.Configuration.EnableHostOnly && !host.Accessible)
                         {
-                            if (!host.Accessible)
-                            {
                                 continue;
-                            }
-                        }
-                        if (header_count == 1)
-                        {
-                            sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"{username}\"");
-                        }
-                        else
+                        } else
                         {
                             sb.AppendLine($"\"\\\\{host.Name}\",\"Host\",\"{host.Accessible}\",\"N/A\",\"N/A\",\"{username}\"");
                         }
@@ -94,48 +75,19 @@ namespace Dionach.ShareAudit.Modules.Services
 
         private void CustomWriteFolderEntry(StringBuilder sb, IFolderEntry entry, string username, Dionach.ShareAudit.Model.Configuration config)
         {
-            string lineAddition = "\"" + entry.FullName + "\"";
-
-            // Shares or Directory
-            if (entry is Share)
+            string lineAddition = $"\"{entry.FullName}\",\"{((entry is Share) ? "Share" : "Directory")}\",\"{((entry is Share) ? (entry as Share).Accessible : entry.EffectiveAccess.Read)}\",\"{entry.EffectiveAccess.Read}\",\"{entry.EffectiveAccess.Write}\",\"{username}\"";
+            if (config.EnableReadOnly && !entry.EffectiveAccess.Read) { return; }
+            if (config.EnableWriteOnly && !entry.EffectiveAccess.Write) { return; }
+            List<string> file_list = config.Files.Files.Split(',').ToList<string>();
+            foreach (var bad_file in file_list)
             {
-                lineAddition = lineAddition + ",\"Share\"";
+                if (entry.FullName.Contains(bad_file.Trim()))
+                {
+                    return;
+                }
             }
-            else
-            {
-                lineAddition = lineAddition + ",\"Directory\"";
-            }
-
-            // If it is accessible
-            if ((entry as Share) != null)
-            {
-                lineAddition = lineAddition + "," + (entry as Share).Accessible;
-            }
-            else
-            {
-                lineAddition = lineAddition + "," + entry.EffectiveAccess.Read;
-            }
-
-            if (config.EnableReadOnly)
-            {
-                lineAddition = lineAddition + ",\" " + entry.EffectiveAccess.Read + "\"";
-                if (!entry.EffectiveAccess.Read) { return; }
-            }
-
-            if (config.EnableWriteOnly)
-            {
-                lineAddition = lineAddition + ",\" " + entry.EffectiveAccess.Write + "\"";
-                if (!entry.EffectiveAccess.Write) { return; }
-            }
-
-            lineAddition = lineAddition + ",\" " + username + "\"";
             sb.AppendLine(lineAddition);
-
-            if (config.EnableSharesOnly)
-            {
-                return;
-            }
-
+            if (config.EnableSharesOnly) { return; }
             foreach (var childEntry in entry.FileSystemEntries)
             {
                 if (childEntry is IFolderEntry)
@@ -144,19 +96,9 @@ namespace Dionach.ShareAudit.Modules.Services
                 }
                 else
                 {
-                    string childAddition = "\"" + childEntry.FullName + "\",File,\"" + childEntry.EffectiveAccess.Read + "\"";
-                    if (config.EnableReadOnly)
-                    {
-                        childAddition = childAddition + ",\" " + entry.EffectiveAccess.Read + "\"";
-                    }
-
-                    if (config.EnableWriteOnly)
-                    {
-                        childAddition = childAddition + ",\" " + entry.EffectiveAccess.Write + "\"";
-                    }
-
-                    childAddition = childAddition + ",\" " + username + "\"";
-                    sb.AppendLine(childAddition);
+                    if (config.EnableReadOnly && !entry.EffectiveAccess.Read) { return; }
+                    if (config.EnableWriteOnly && !entry.EffectiveAccess.Write) { return; }
+                    sb.AppendLine($"\"{childEntry.FullName}\",\"File\",\"{childEntry.EffectiveAccess.Read}\",\"{childEntry.EffectiveAccess.Read}\",\"{childEntry.EffectiveAccess.Write}\",\"{username}\"");
                 }
             }
         }
